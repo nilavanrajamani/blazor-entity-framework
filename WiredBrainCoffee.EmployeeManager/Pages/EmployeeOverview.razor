@@ -1,19 +1,35 @@
 ﻿@page "/employees/list"
+@page "/employees/list/{currentPage:int}"
 @inject IDbContextFactory<EmployeeManagerDbContext> DbContextFactory
+@inject NavigationManager NavigationManager
 
 <PageTitle>Employees</PageTitle>
 
 <h1>Employees</h1>
 
-@if(Employees is null)
+@if (Employees is null)
 {
     <div>Loading...</div>
 }
 else
-{    
+{
+    <ul class="pagination mt-3">
+        <li class="page-item @(CurrentPage == 1 ? "disabled": "")">
+            <a class="page-link" href="/employees/list/@(CurrentPage - 1)">Previous</a>
+        </li>
+        @for (var i = 1; i <= TotalPages; i++)
+        {
+            <li class="page-item @(i == CurrentPage ? "active" : "")">
+                <a class="page-link" href="/employees/list/@i">@i</a>
+            </li>
+        }
+        <li class="page-item @(CurrentPage == TotalPages ? "disabled": "")">
+            <a class="page-link" href="/employees/list/@(CurrentPage + 1)">Next</a>
+        </li>
+    </ul>
     <table class="table table-striped">
         <thead>
-            <tr>            
+            <tr>
                 <th>First Name</th>
                 <th>Last Name</th>
                 <th>Is Developer</th>
@@ -23,7 +39,7 @@ else
         <tbody>
             @foreach (var employee in Employees)
             {
-                <tr>                
+                <tr>
                     <td>@employee.FirstName</td>
                     <td>@employee.LastName</td>
                     <td>@employee.IsDeveloper</td>
@@ -36,15 +52,42 @@ else
 
 @code
 {
+    [Parameter]
+    public int? CurrentPage { get; set; }
+
+    private int TotalPages { get; set; }
+
     public List<Employee> Employees { get; set; } = new List<Employee>();
 
-    protected override async Task OnInitializedAsync()
+    private const int ItemsPerPage = 4;
+
+    protected override async Task OnParametersSetAsync()
     {
-         using(EmployeeManagerDbContext context = DbContextFactory.CreateDbContext())
-         {
-                Employees = await context.Employees
-                            .Include(e => e.Department)
-                            .ToListAsync();
-         }        
+        if (CurrentPage is null or < 1)
+        {
+            NavigationManager.NavigateTo("/employees/list/1");
+            return;
+        }
+
+        var itemsToSkip = (CurrentPage.Value - 1) * ItemsPerPage;
+
+        using (EmployeeManagerDbContext context = DbContextFactory.CreateDbContext())
+        {
+            var employeeCount = await context.Employees.CountAsync();
+            TotalPages = employeeCount == 0 ? 1 : (int)Math.Ceiling((double)employeeCount / ItemsPerPage);
+
+            if (CurrentPage > TotalPages)
+            {
+                NavigationManager.NavigateTo($"/employees/list/{TotalPages}");
+                return;
+            }
+
+            Employees = await context.Employees
+                        .Include(e => e.Department)
+                        .OrderBy(e => e.FirstName)
+                        .Skip(itemsToSkip)
+                        .Take(ItemsPerPage)
+                        .ToListAsync();
+        }
     }
 }
