@@ -1,0 +1,50 @@
+﻿@page "/employees/list"
+@inject IDbContextFactory<EmployeeManagerDbContext> DbContextFactory
+
+<PageTitle>Employees</PageTitle>
+
+<h1>Employees</h1>
+
+@if(Employees is null)
+{
+    <div>Loading...</div>
+}
+else
+{    
+    <table class="table table-striped">
+        <thead>
+            <tr>            
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Is Developer</th>
+                <th>Department</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var employee in Employees)
+            {
+                <tr>                
+                    <td>@employee.FirstName</td>
+                    <td>@employee.LastName</td>
+                    <td>@employee.IsDeveloper</td>
+                    <td>@employee.Department?.Name</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code
+{
+    public List<Employee> Employees { get; set; } = new List<Employee>();
+
+    protected override async Task OnInitializedAsync()
+    {
+         using(EmployeeManagerDbContext context = DbContextFactory.CreateDbContext())
+         {
+                Employees = await context.Employees
+                            .Include(e => e.Department)
+                            .ToListAsync();
+         }        
+    }
+}
