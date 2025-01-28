@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using WiredBrainCoffee.EmployeeManager.Data;
+using WiredBrainCoffee.EmployeeManager.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
+builder.Services.AddScoped<StateContainer>();
 builder.Services.AddDbContextFactory<EmployeeManagerDbContext>(
     opt => opt.UseSqlServer(
         builder.Configuration.GetConnectionString("EmployeeManagerDb")));

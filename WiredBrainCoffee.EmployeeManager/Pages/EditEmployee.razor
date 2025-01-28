@@ -1,0 +1,92 @@
+﻿@page "/employees/edit/{employeeId:int?}"
+@inject IDbContextFactory<EmployeeManagerDbContext> DbContextFactory
+@inject NavigationManager NavigationManager
+@inject StateContainer StateContainer
+
+<PageTitle>Edit Employee</PageTitle>
+
+<h1>Edit Employee</h1>
+
+@if (employee is null)
+{
+    <div class="alert alert-danger">Employee not found</div>
+}
+else
+{
+    @if (SuccessMessage is not null)
+    {
+        <br />
+        <div class="alert alert-success" role="alert">
+            @SuccessMessage
+        </div>
+    }
+
+    @if (ErrorMessage is not null)
+    {
+        <br />
+        <div class="alert alert-danger" role="alert">
+            @ErrorMessage
+        </div>
+    }
+
+    <EmployeeForm Departments="Departments" Employee="employee" OnSubmit="SaveEmployee" isEdit="true"></EmployeeForm>
+}
+
+@code {
+    [Parameter]
+    public int? EmployeeId { get; set; }
+
+    private Employee employee = null;
+    private List<Department> Departments = new List<Department>();
+    private string? SuccessMessage { get; set; }
+    private string? ErrorMessage { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        using (EmployeeManagerDbContext context = DbContextFactory.CreateDbContext())
+        {
+            employee = await context.Employees.AsNoTracking().FirstOrDefaultAsync(x => x.Id == EmployeeId);
+            Departments = await context.Departments.AsNoTracking().OrderBy(d => d.Name).ToListAsync();
+        }
+    }
+
+    private async Task HandleSubmit(bool isValid)
+    {
+        if (isValid)
+        {
+            await SaveEmployee();
+        }
+        else
+        {
+            ShowErrors();
+        }
+    }
+
+    private async Task SaveEmployee()
+    {
+        try
+        {
+            using (EmployeeManagerDbContext context = DbContextFactory.CreateDbContext())
+            {
+                context.Update(employee);
+                await context.SaveChangesAsync();
+
+                SuccessMessage = "Employee saved successfully";
+                ErrorMessage = null;
+                NavigationManager.NavigateTo(@$"/employees/list/{StateContainer.EmployeeOverviewPage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+            SuccessMessage = null;
+            ErrorMessage = "An error occurred while saving the employee";
+        }
+    }
+
+    private void ShowErrors()
+    {
+        SuccessMessage = null;
+        ErrorMessage = null;
+    }
+}

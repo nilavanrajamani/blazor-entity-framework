@@ -2,6 +2,7 @@
 @page "/employees/list/{currentPage:int}"
 @inject IDbContextFactory<EmployeeManagerDbContext> DbContextFactory
 @inject NavigationManager NavigationManager
+@inject StateContainer StateContainer
 
 <PageTitle>Employees</PageTitle>
 
@@ -34,6 +35,7 @@ else
                 <th>Last Name</th>
                 <th>Is Developer</th>
                 <th>Department</th>
+                <th>#</th>
             </tr>
         </thead>
         <tbody>
@@ -44,6 +46,10 @@ else
                     <td>@employee.LastName</td>
                     <td>@employee.IsDeveloper</td>
                     <td>@employee.Department?.Name</td>
+                    <td>
+                        <a href="/employees/edit/@employee.Id" class="btn btn-outline-primary">Edit</a>
+                        <a href="/employees/delete/@employee.Id" class="btn btn-outline-danger">Delete</a>
+                    </td>
                 </tr>
             }
         </tbody>
@@ -81,6 +87,8 @@ else
                 NavigationManager.NavigateTo($"/employees/list/{TotalPages}");
                 return;
             }
+
+            StateContainer.EmployeeOverviewPage = CurrentPage.Value;
 
             Employees = await context.Employees
                         .Include(e => e.Department)
